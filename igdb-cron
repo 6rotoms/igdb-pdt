@@ -1,0 +1,1 @@
+30 2 * * * python /script/populate_db.py >> /var/log/cron.log
