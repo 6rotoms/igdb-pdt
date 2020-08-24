@@ -11,18 +11,22 @@ from redisearch import Client, TextField
 import os
 from datetime import datetime
 
-USER_KEY = ''
+USER_KEY = 'de3df3e4c967363b9ef0ecfd68ee89e6'
 REDIS_HOSTNAME = ''
 REDIS_PORT = 6379
+IGDB_SRC = 'API'
 if 'REDIS_HOSTNAME' in os.environ:
     REDIS_HOSTNAME = os.environ['REDIS_HOSTNAME']
 if 'REDIS_PORT' in os.environ:
     REDIS_PORT = os.environ['REDIS_PORT']
 if 'IGDB_API_KEY' in os.environ:
     USER_KEY = os.environ['IGDB_API_KEY']
+if 'IGDB_SRC' in os.environ:
+    IGDB_SRC = os.environ['IGDB_SRC']
 
-GAME_QUERY_STRING = b'fields name, cover.url; where multiplayer_modes.onlinecoop=true | \
-                 multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true;'
+GAME_QUERY_STRING = b'fields id, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
+                 multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
+                 game_modes = (2, 6));'
 
 
 async def get_count(
@@ -39,13 +43,13 @@ async def get_count(
 
 async def get_games(
     session: aiohttp.ClientSession,
-    offset: int
+    offset: int,
+    max_id: int
 ) -> dict:
     url = "https://api-v3.igdb.com/games"
     resp = await session.post(url=url, headers={"user-key": USER_KEY},
-                              data=GAME_QUERY_STRING + b' limit 500; offset %d;' % offset)
+                              data=GAME_QUERY_STRING[:-1] + b' & id>%d;limit 500;offset %d;' % (max_id, offset))
     data = await resp.json()
-    print(f"Received data for {url} with offset {offset}")
     return data
 
 
@@ -57,13 +61,19 @@ def get_cover(data: dict):
 
 async def fetch_games():
     async with aiohttp.ClientSession() as session:
-        tasks = []
         count = await get_count(session=session)
-        for i in range(0, count, 500):
-            tasks.append(get_games(session=session, offset=i))
-        data = await asyncio.gather(*tasks, return_exceptions=True)
-        data = list(itertools.chain(*data))
-        data = {p['id']: {'name': p['name'], 'cover': get_cover(p)} for p in data}
+        max_id = -1
+        data = {}
+        for i in range(0, count, 5000):
+            tasks = []
+            for i in range(0, 5000, 500):
+                tasks.append(get_games(session=session, offset=i, max_id=max_id))
+            new_data = await asyncio.gather(*tasks, return_exceptions=True)
+            new_data = list(itertools.chain(*new_data))
+            max_entry = max(new_data, key=lambda d: d['id'])
+            max_id = int(max_entry['id'])
+            new_data = {p['id']: {'name': p['name'], 'cover': get_cover(p)} for p in new_data}
+            data = {**data, **new_data}
         return json.dumps(data, indent=4)
 
 
@@ -86,7 +96,7 @@ def cache_to_redis(data: dict):
 
 def main(args: dict):
     print('igdb redis updating: ', datetime.now())
-    if os.environ['IGDB_SRC'] == 'MOCK' or args.mock:
+    if IGDB_SRC == 'MOCK' or args.mock:
         data = load_mock_data()
     else:
         data = asyncio.run(fetch_games())
