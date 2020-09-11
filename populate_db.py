@@ -100,12 +100,9 @@ def cache_to_redis(data: dict):
         print('REDIS_HOSTNAME environment variable is not set')
         return
     client = Client('games', host='redis', port=REDIS_PORT)
-    client.create_index([
-        TextField('name'),
-        TextField('cover', weight=0),
-        TextField('thumb', weight=0),
-        TextField('summary', weight=0)
-    ])
+    client.create_index([TextField('name', weight=10), TextField('summary', weight=1)],
+                        TextField('cover', weight=0),
+                        TextField('thumb', weight=0))
     for k, v in data.items():
         client.add_document(k,
                             name=v['name'],
