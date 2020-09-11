@@ -11,7 +11,7 @@ from redisearch import Client, TextField
 import os
 from datetime import datetime
 
-USER_KEY = 'de3df3e4c967363b9ef0ecfd68ee89e6'
+USER_KEY = ''
 REDIS_HOSTNAME = ''
 REDIS_PORT = 6379
 IGDB_SRC = 'API'
@@ -24,7 +24,7 @@ if 'IGDB_API_KEY' in os.environ:
 if 'IGDB_SRC' in os.environ:
     IGDB_SRC = os.environ['IGDB_SRC']
 
-GAME_QUERY_STRING = b'fields id, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
+GAME_QUERY_STRING = b'fields id, summary, slug, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
                  game_modes = (2, 6));'
 
@@ -48,7 +48,8 @@ async def get_games(
 ) -> dict:
     url = "https://api-v3.igdb.com/games"
     resp = await session.post(url=url, headers={"user-key": USER_KEY},
-                              data=GAME_QUERY_STRING[:-1] + b' & id>%d;limit 500;offset %d;' % (max_id, offset))
+                              data=GAME_QUERY_STRING[:-1] +
+                              b' & id>%d;limit 500;offset %d;' % (max_id, offset))
     data = await resp.json()
     return data
 
@@ -56,6 +57,12 @@ async def get_games(
 def get_cover(data: dict):
     if 'cover' in data:
         return data['cover']['url'].replace('t_thumb', 't_cover_big')
+    return ''
+
+
+def get_thumb(data: dict):
+    if 'cover' in data:
+        return data['cover']['url']
     return ''
 
 
@@ -72,7 +79,12 @@ async def fetch_games():
             new_data = list(itertools.chain(*new_data))
             max_entry = max(new_data, key=lambda d: d['id'])
             max_id = int(max_entry['id'])
-            new_data = {p['id']: {'name': p['name'], 'cover': get_cover(p)} for p in new_data}
+            new_data = {p['slug']: {
+                'name': p['name'],
+                'summary': p.get('summary', ''),
+                'thumb': get_thumb(p),
+                'cover': get_cover(p)
+            } for p in new_data}
             data = {**data, **new_data}
         return json.dumps(data, indent=4)
 
@@ -88,9 +100,18 @@ def cache_to_redis(data: dict):
         print('REDIS_HOSTNAME environment variable is not set')
         return
     client = Client('games', host='redis', port=REDIS_PORT)
-    client.create_index([TextField('name')], TextField('cover', weight=0))
+    client.create_index([
+        TextField('name'),
+        TextField('cover', weight=0),
+        TextField('thumb', weight=0),
+        TextField('summary', weight=0)
+    ])
     for k, v in data.items():
-        client.add_document(k, name=v['name'], cover=v['cover'])
+        client.add_document(k,
+                            name=v['name'],
+                            cover=v['cover'],
+                            thumb=v['thumb'],
+                            summary=v['summary'])
     print('done')
 
 
