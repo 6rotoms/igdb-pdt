@@ -1,15 +1,18 @@
 # igdb-pdt
 
 Update RediSearch with IGDB data in the following Format:  
-
 ```json
 {
-  "game_id": {
+  "game_slug": {
     "name": "game_name",
-    "cover": "igdb_coverart_url"
+    "cover": "igdb_coverart_url",
+    "thumb": "igdb_thumbart_url",
+    "summary": "summary text"
   }
 }
 ```
+
+*__Note__: Only the name and summary are used as fields that impact the search, with weights 10 and 1 respectively*  
 
 ## Usage
 
@@ -19,7 +22,7 @@ Update RediSearch with IGDB data in the following Format:
 
 `--mock`: gets data from data.json file instead of IGDB.  
 `--persist`: save to RediSearch.  
-`--output`: display data from IGDB in json format.  
+`--output`: display data from IGDB to console.  
 
 ## Environment Variables
 
