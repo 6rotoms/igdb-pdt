@@ -10,6 +10,7 @@ import argparse
 from redisearch import Client, TextField
 import os
 from datetime import datetime
+import time
 
 USER_KEY = ''
 REDIS_HOSTNAME = ''
@@ -100,9 +101,17 @@ def cache_to_redis(data: dict):
         print('REDIS_HOSTNAME environment variable is not set')
         return
     client = Client('games', host='redis', port=REDIS_PORT)
-    client.create_index([TextField('name', weight=10), TextField('summary', weight=1)],
-                        TextField('cover', weight=0),
-                        TextField('thumb', weight=0))
+    indexCreated = False
+    while not indexCreated:
+        try:
+            client.create_index([TextField('name', weight=10), TextField('summary', weight=1)],
+                                TextField('cover', weight=0),
+                                TextField('thumb', weight=0))
+            indexCreated = True
+        except:
+            print('Failed to create index, retrying')
+            time.sleep(3)
+
     for k, v in data.items():
         client.add_document(k,
                             name=v['name'],
