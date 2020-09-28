@@ -13,7 +13,7 @@ from datetime import datetime
 import time
 
 USER_KEY = ''
-REDIS_HOSTNAME = ''
+REDIS_HOSTNAME = 'localhost'
 REDIS_PORT = 6379
 IGDB_SRC = 'API'
 if 'REDIS_HOSTNAME' in os.environ:
@@ -100,7 +100,7 @@ def cache_to_redis(data: dict):
     if REDIS_HOSTNAME == '':
         print('REDIS_HOSTNAME environment variable is not set')
         return
-    client = Client('games', host='redis', port=REDIS_PORT)
+    client = Client('games', host=REDIS_HOSTNAME, port=REDIS_PORT)
     indexCreated = False
     while not indexCreated:
         try:

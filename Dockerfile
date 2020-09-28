@@ -8,7 +8,6 @@ COPY data.json /script/data.json
 COPY populate_db.py /script/populate_db.py
 COPY startup.sh /script/startup.sh
 RUN pip install --no-cache-dir -r requirements.txt
-RUN chmod 0744 /script/populate_db.py
 
 VOLUME /var/log
 RUN apt-get update && apt-get -y install cron

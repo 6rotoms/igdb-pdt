@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 python /script/populate_db.py --mock --persist >> /var/log/cron.log
 
