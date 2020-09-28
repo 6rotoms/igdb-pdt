@@ -16,4 +16,4 @@ COPY igdb-cron /etc/cron.d/igdb-cron
 RUN chmod 0644 /etc/cron.d/igdb-cron
 RUN touch /var/log/cron.log
 
-CMD /script/startup.sh
+CMD . /script/startup.sh
