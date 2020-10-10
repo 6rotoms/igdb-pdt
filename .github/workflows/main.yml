@@ -16,4 +16,4 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: 6rotom/igdb-pdt
           tag_with_ref: true
-	  tags:6rotom/igdb-pdt:latest
+	  tags: latest
