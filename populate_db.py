@@ -12,7 +12,9 @@ import os
 from datetime import datetime
 import time
 
-USER_KEY = ''
+BASE_URL='https://api.igdb.com/v4/games'
+CLIENT_ID = ''
+CLIENT_SECRET = ''
 REDIS_HOSTNAME = 'localhost'
 REDIS_PORT = 6379
 IGDB_SRC = 'API'
@@ -20,25 +22,40 @@ if 'REDIS_HOSTNAME' in os.environ:
     REDIS_HOSTNAME = os.environ['REDIS_HOSTNAME']
 if 'REDIS_PORT' in os.environ:
     REDIS_PORT = os.environ['REDIS_PORT']
-if 'IGDB_API_KEY' in os.environ:
-    USER_KEY = os.environ['IGDB_API_KEY']
+if 'AUTHORIZATION' in os.environ:
+    AUTHORIZATION = os.environ['AUTHORIZATION']
+if 'CLIENT_ID' in os.environ:
+    CLIENT_ID = os.environ['CLIENT_ID']
+if 'CLIENT_SECRET' in os.environ:
+    CLIENT_SECRET = os.environ['CLIENT_SECRET']
 if 'IGDB_SRC' in os.environ:
     IGDB_SRC = os.environ['IGDB_SRC']
+
+auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': 'Bearer '}
 
 GAME_QUERY_STRING = b'fields id, summary, slug, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
                  game_modes = (2, 6));'
 
 
+async def set_authorization(
+    session: aiohttp.ClientSession
+) -> dict:
+    url = 'https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials' % (CLIENT_ID, CLIENT_SECRET)
+    resp = await session.post(url=url)
+    data = await resp.json()
+    access_token = data['access_token']
+    auth_headers['Authorization'] = 'Bearer %s' % access_token
+
+
 async def get_count(
     session: aiohttp.ClientSession
 ) -> dict:
-    url = "https://api-v3.igdb.com/games/count"
-    resp = await session.post(url=url, headers={"user-key": USER_KEY},
+    url = BASE_URL + '/count'
+    resp = await session.post(url=url, headers=auth_headers,
                               data=GAME_QUERY_STRING)
     data = await resp.json()
     count = data['count']
-    print(f"Received data for {count} multiplayer games")
     return count
 
 
@@ -47,8 +64,8 @@ async def get_games(
     offset: int,
     max_id: int
 ) -> dict:
-    url = "https://api-v3.igdb.com/games"
-    resp = await session.post(url=url, headers={"user-key": USER_KEY},
+    url = BASE_URL
+    resp = await session.post(url=url, headers=auth_headers,
                               data=GAME_QUERY_STRING[:-1] +
                               b' & id>%d;limit 500;offset %d;' % (max_id, offset))
     data = await resp.json()
@@ -69,6 +86,7 @@ def get_thumb(data: dict):
 
 async def fetch_games():
     async with aiohttp.ClientSession() as session:
+        await set_authorization(session=session)
         count = await get_count(session=session)
         max_id = -1
         data = {}
