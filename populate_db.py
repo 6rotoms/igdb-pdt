@@ -31,11 +31,11 @@ if 'CLIENT_SECRET' in os.environ:
 if 'IGDB_SRC' in os.environ:
     IGDB_SRC = os.environ['IGDB_SRC']
 
-auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': 'Bearer '}
+auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': ''}
 
 GAME_QUERY_STRING = b'fields id, summary, slug, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
-                 game_modes = (2, 6));'
+                 game_modes = (2, 6)) & category!=(1,12);'
 
 
 async def set_authorization(
@@ -55,6 +55,7 @@ async def get_count(
     resp = await session.post(url=url, headers=auth_headers,
                               data=GAME_QUERY_STRING)
     data = await resp.json()
+    print(data)
     count = data['count']
     return count
 
@@ -90,9 +91,15 @@ async def fetch_games():
         count = await get_count(session=session)
         max_id = -1
         data = {}
-        for i in range(0, count, 5000):
+        last_time = 0
+        for _ in range(0, count, 2000):
+            new_time = time.time_ns()
+            while new_time - last_time < 1000000000:
+                time.sleep(500/1000000000)
+                new_time = time.time_ns()
+            last_time = new_time
             tasks = []
-            for i in range(0, 5000, 500):
+            for i in range(0, 2000, 500):
                 tasks.append(get_games(session=session, offset=i, max_id=max_id))
             new_data = await asyncio.gather(*tasks, return_exceptions=True)
             new_data = list(itertools.chain(*new_data))
