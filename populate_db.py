@@ -35,7 +35,7 @@ auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': ''}
 
 GAME_QUERY_STRING = b'fields id, summary, slug, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
-                 game_modes = (2, 6)) & category!=(1,12);'
+                 game_modes = (2, 6)) & category=0;'
 
 
 async def set_authorization(
