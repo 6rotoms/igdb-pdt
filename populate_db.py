@@ -95,7 +95,7 @@ async def fetch_games():
         for _ in range(0, count, 2000):
             new_time = time.time_ns()
             while new_time - last_time < 1000000000:
-                time.sleep(500/1000000000)
+                time.sleep(5000/1000000000.0)
                 new_time = time.time_ns()
             last_time = new_time
             tasks = []
