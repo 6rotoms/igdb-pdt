@@ -7,12 +7,13 @@ Update RediSearch with IGDB data in the following Format:
     "name": "game_name",
     "cover": "igdb_coverart_url",
     "thumb": "igdb_thumbart_url",
-    "summary": "summary text"
+    "summary": "summary text",
+    "alt_names_%i": "alt_name_i"
   }
 }
 ```
 
-*__Note__: Only the name and summary are used as fields that impact the search, with weights 10 and 1 respectively*  
+*__Note__: Only the name, alt_names, and summary are used as fields that impact the search, with weights 10, 10, and 1 respectively.*  
 
 ## Usage
 

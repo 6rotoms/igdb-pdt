@@ -33,7 +33,7 @@ if 'IGDB_SRC' in os.environ:
 
 auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': ''}
 
-GAME_QUERY_STRING = b'fields id, summary, slug, name, cover.url; where (multiplayer_modes.onlinecoop=true | \
+GAME_QUERY_STRING = b'fields id, summary, slug, name, alternative_names.name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
                  game_modes = (2, 6)) & category=0;'
 
@@ -78,13 +78,6 @@ def get_cover(data: dict):
         return data['cover']['url'].replace('t_thumb', 't_cover_big')
     return ''
 
-
-def get_thumb(data: dict):
-    if 'cover' in data:
-        return data['cover']['url']
-    return ''
-
-
 async def fetch_games():
     async with aiohttp.ClientSession() as session:
         await set_authorization(session=session)
@@ -107,9 +100,10 @@ async def fetch_games():
             max_id = int(max_entry['id'])
             new_data = {p['slug']: {
                 'name': p['name'],
-                'summary': p.get('summary', ''),
-                'thumb': get_thumb(p),
-                'cover': get_cover(p)
+                'alt_names': [*map(lambda v: v.get('name', ''), p.get('alternative_names', []))],
+                'summary': p.get('summary', False) or '',
+                'thumb':  p.get('cover', {}).get('url', '') or '',
+                'cover': get_cover(p),
             } for p in new_data}
             data = {**data, **new_data}
         return json.dumps(data, indent=4)
@@ -127,9 +121,12 @@ def cache_to_redis(data: dict):
         return
     client = Client('games', host=REDIS_HOSTNAME, port=REDIS_PORT)
     indexCreated = False
+    maxAltNames = len(max(data.values(), key=lambda d: len(d['alt_names']))['alt_names'])
     while not indexCreated:
         try:
-            client.create_index([TextField('name', weight=10), TextField('summary', weight=1)],
+            client.create_index([TextField('name', weight=10),
+                                *[TextField('alt_name_%d' % i, weight=10) for i in range(maxAltNames)],
+                                TextField('summary', weight=1)],
                                 TextField('cover', weight=0),
                                 TextField('thumb', weight=0))
             indexCreated = True
@@ -140,6 +137,7 @@ def cache_to_redis(data: dict):
     for k, v in data.items():
         client.add_document(k,
                             name=v['name'],
+                            **{'alt_name_%d' % i:n for i, n in enumerate(v['alt_names'])},
                             cover=v['cover'],
                             thumb=v['thumb'],
                             summary=v['summary'])
