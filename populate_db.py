@@ -35,12 +35,15 @@ auth_headers = {'Client-ID': CLIENT_ID, 'Authorization': ''}
 
 GAME_QUERY_STRING = b'fields id, summary, slug, name, alternative_names.name, cover.url; where (multiplayer_modes.onlinecoop=true | \
                  multiplayer_modes.offlinecoop=true | multiplayer_modes.lancoop=true | \
-                 game_modes = (2, 6)) & category=0;'
+                 game_modes = (2, 6)) & category=(0,9);'
 
 
 async def set_authorization(
     session: aiohttp.ClientSession
 ) -> dict:
+    if not (CLIENT_ID and CLIENT_SECRET):
+        print('CLIENT_ID and CLIENT_SECRET environment variables not set!')
+        return;
     url = 'https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials' % (CLIENT_ID, CLIENT_SECRET)
     resp = await session.post(url=url)
     data = await resp.json()
@@ -81,6 +84,9 @@ def get_cover(data: dict):
 async def fetch_games():
     async with aiohttp.ClientSession() as session:
         await set_authorization(session=session)
+        if not auth_headers['Authorization']:
+            print('Failed to set Authorization!')
+            return json.dumps({}, indent=4)
         count = await get_count(session=session)
         max_id = -1
         data = {}

@@ -1,6 +1,6 @@
 # igdb-pdt
 
-Update RediSearch with IGDB data in the following Format:  
+Update RediSearch with IGDB games data in the following Format:  
 ```json
 {
   "game_slug": {
@@ -12,6 +12,10 @@ Update RediSearch with IGDB data in the following Format:
   }
 }
 ```
+
+__The only games that are pulled in by this script have the following properties:__
+  - lan, offline, or online co-op
+  - category of 0 (base game) or 9 (remaster)
 
 *__Note__: Only the name, alt_names, and summary are used as fields that impact the search, with weights 10, 10, and 1 respectively.*  
 
