@@ -58,7 +58,6 @@ async def get_count(
     resp = await session.post(url=url, headers=auth_headers,
                               data=GAME_QUERY_STRING)
     data = await resp.json()
-    print(data)
     count = data['count']
     return count
 
