@@ -1,4 +1,4 @@
-FROM python:3.9.5
+FROM python:latest
 
 WORKDIR /script
 ENV IGDB_SRC=MOCK
